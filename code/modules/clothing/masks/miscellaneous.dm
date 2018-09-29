@@ -8,7 +8,9 @@
 	gas_transfer_coefficient = 0.90
 	put_on_delay = 20
 	var/resist_time = 0 //deciseconds of how long you need to gnaw to get rid of the gag, 0 to make it impossible to remove
-	var/mute = 1 // 1 - completely mutes you, 0 - muffles everything you say "MHHPHHMMM!!!"
+	var/mute = MUZZLE_MUTE_ALL
+	var/security_lock = FALSE // Requires brig access to remove 0 - Remove as normal
+	var/locked = FALSE //Indicates if a mask is locked, should always start as 0.
 	species_fit = list("Vox")
 	sprite_sheets = list(
 		"Vox" = 'icons/mob/species/vox/mask.dmi'
@@ -18,7 +20,65 @@
 /obj/item/clothing/mask/muzzle/attack_hand(mob/user as mob)
 	if(user.wear_mask == src && !user.IsAdvancedToolUser())
 		return 0
+	else if(security_lock && locked)
+		if(do_unlock(user))
+			visible_message("<span class='danger'>[user] unlocks [user.p_their()] [src.name].</span>", \
+								"<span class='userdanger'>[user] unlocks [user.p_their()] [src.name].</span>")
 	..()
+	return 1
+
+/obj/item/clothing/mask/muzzle/proc/do_break()
+	if(security_lock)
+		security_lock = FALSE
+		locked = FALSE
+		flags &= ~NODROP
+		desc += " This one appears to be broken."
+		return TRUE
+	else
+		return FALSE
+
+/obj/item/clothing/mask/muzzle/proc/do_unlock(mob/living/carbon/human/user)
+	if(istype(user.get_inactive_hand(), /obj/item/card/emag))
+		to_chat(user, "<span class='warning'>The lock vibrates as the card forces its locking system open.</span>")
+		do_break()
+		return TRUE
+	else if(access_brig in user.get_access())
+		to_chat(user, "<span class='warning'>The muzzle unlocks with a click.</span>")
+		locked = FALSE
+		flags &= ~NODROP
+		return TRUE
+
+	to_chat(user, "<span class='warning'>You must be wearing a security ID card or have one in your inactive hand to remove the muzzle.</span>")
+	return FALSE
+
+/obj/item/clothing/mask/muzzle/proc/do_lock(mob/living/carbon/human/user)
+	if(security_lock)
+		locked = TRUE
+		flags |= NODROP
+		return TRUE
+	return FALSE
+
+/obj/item/clothing/mask/muzzle/Topic(href, href_list)
+	..()
+	if(href_list["locked"])
+		var/mob/living/carbon/wearer = locate(href_list["locked"])
+		var/success = 0
+		if(ishuman(usr))
+			visible_message("<span class='danger'>[usr] tries to [locked ? "unlock" : "lock"] [wearer]'s [name].</span>", \
+							"<span class='userdanger'>[usr] tries to [locked ? "unlock" : "lock"] [wearer]'s [name].</span>")
+			if(do_mob(usr, wearer, POCKET_STRIP_DELAY))
+				if(locked)
+					success = do_unlock(usr)
+				else
+					success = do_lock(usr)
+			if(success)
+				visible_message("<span class='danger'>[usr] [locked ? "locks" : "unlocks"] [wearer]'s [name].</span>", \
+									"<span class='userdanger'>[usr] [locked ? "locks" : "unlocks"] [wearer]'s [name].</span>")
+				if(usr.machine == wearer && in_range(src, usr))
+					wearer.show_inv(usr)
+		else
+			to_chat(usr, "You lack the ability to manipulate the lock.")
+
 
 /obj/item/clothing/mask/muzzle/gag
 	name = "gag"
@@ -33,7 +93,8 @@
 	item_state = null
 	w_class = WEIGHT_CLASS_TINY
 	resist_time = 150
-	mute = 0
+	mute = MUZZLE_MUTE_MUFFLE
+	flags = DROPDEL
 	species_fit = list("Vox", "Unathi", "Tajaran", "Vulpkanin", "Grey")
 	sprite_sheets = list(
 		"Vox" = 'icons/mob/species/vox/mask.dmi',
@@ -49,9 +110,89 @@
 	R.loc = T
 	transfer_fingerprints_to(R)
 	playsound(src,'sound/items/poster_ripped.ogg',40,1)
-	spawn(0) // Because of how dropping is done, if the muzzle gets deleted now, icons won't properly update and the whole unEquip() proc will break stuff.
-		qdel(src) // This makes sure it gets deleted AFTER all that has to be done is done.
-		user.emote("scream")
+	user.emote("scream")
+	. = ..()
+
+/obj/item/clothing/mask/muzzle/safety
+	name = "safety muzzle"
+	desc = "A muzzle designed to prevent biting."
+	resist_time = 600
+	mute = MUZZLE_MUTE_NONE
+	security_lock = TRUE
+	locked = FALSE
+	materials = list(MAT_METAL=500, MAT_GLASS=50)
+
+/obj/item/clothing/mask/muzzle/safety/shock
+	name = "shock muzzle"
+	desc = "A muzzle designed to prevent biting.  This one is fitted with a behavior correction system."
+	var/obj/item/assembly/trigger = null
+	origin_tech = "materials=1;engineering=1"
+	materials = list(MAT_METAL=500, MAT_GLASS=50)
+
+/obj/item/clothing/mask/muzzle/safety/shock/attackby(obj/item/W, mob/user, params)
+	if(isscrewdriver(W) && trigger)
+		to_chat(user, "<span class='notice'>You disassemble [src].</span>")
+		trigger.forceMove(get_turf(user))
+		trigger.master = null
+		trigger.holder = null
+		trigger = null
+		return TRUE
+	else if(istype(W, /obj/item/assembly/signaler) || istype(W, /obj/item/assembly/voice))
+		if(istype(trigger, /obj/item/assembly/signaler) || istype(trigger, /obj/item/assembly/voice))
+			to_chat(user, "<span class='notice'>Something is already attached to [src].</span>")
+			return FALSE
+		if(!user.drop_item())
+			to_chat(user, "<span class='warning'>You are unable to insert [W] into [src].</span>")
+			return FALSE
+		trigger = W
+		trigger.forceMove(src)
+		trigger.master = src
+		trigger.holder = src
+		to_chat(user, "<span class='notice'>You attach the [W] to [src].</span>")
+		return TRUE
+	else if(istype(W, /obj/item/assembly))
+		to_chat(user, "<span class='notice'>That won't fit in [src]. Perhaps a signaler or voice analyzer would?</span>")
+		return FALSE
+
+	return ..()
+
+
+/obj/item/clothing/mask/muzzle/safety/shock/proc/can_shock(obj/item/clothing/C)
+	if(istype(C))
+		if(isliving(C.loc))
+			return C.loc
+	else if(isliving(loc))
+		return loc
+	return FALSE
+
+/obj/item/clothing/mask/muzzle/safety/shock/proc/process_activation(var/obj/D, var/normal = 1, var/special = 1)
+	visible_message("[bicon(src)] *beep* *beep*", "*beep* *beep*")
+	var/mob/M = can_shock(loc)
+	if(M)
+		to_chat(M, "<span class='danger'>You feel a sharp shock!</span>")
+		var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
+		s.set_up(3, 1, M)
+		s.start()
+
+		M.Weaken(5)
+		M.Stuttering(1)
+		M.Jitter(20)
+	return
+
+/obj/item/clothing/mask/muzzle/safety/shock/HasProximity(atom/movable/AM as mob|obj)
+	if(trigger)
+		trigger.HasProximity(AM)
+
+
+/obj/item/clothing/mask/muzzle/safety/shock/hear_talk(mob/living/M as mob, msg)
+	if(trigger)
+		trigger.hear_talk(M, msg)
+
+/obj/item/clothing/mask/muzzle/safety/shock/hear_message(mob/living/M as mob, msg)
+	if(trigger)
+		trigger.hear_message(M, msg)
+
+
 
 /obj/item/clothing/mask/surgical
 	name = "sterile mask"
@@ -100,7 +241,7 @@
 		return 1
 
 /obj/item/clothing/mask/fakemoustache/proc/pontificate(mob/user)
-	user.visible_message("<span class='danger'>\ [user] twirls \his moustache and laughs [pick("fiendishly","maniacally","diabolically","evilly")]!</span>")
+	user.visible_message("<span class='danger'>\ [user] twirls [user.p_their()] moustache and laughs [pick("fiendishly","maniacally","diabolically","evilly")]!</span>")
 
 //scarves (fit in in mask slot)
 

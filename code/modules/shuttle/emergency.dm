@@ -6,10 +6,10 @@
 	var/auth_need = 3
 	var/list/authorized = list()
 
-/obj/machinery/computer/emergency_shuttle/attackby(obj/item/weapon/card/W, mob/user, params)
+/obj/machinery/computer/emergency_shuttle/attackby(obj/item/card/W, mob/user, params)
 	if(stat & (BROKEN|NOPOWER))
 		return
-	if(!istype(W, /obj/item/weapon/card))
+	if(!istype(W, /obj/item/card))
 		return
 	if(shuttle_master.emergency.mode != SHUTTLE_DOCKED)
 		return
@@ -17,9 +17,9 @@
 		return
 	if(shuttle_master.emergency.timeLeft() < 11)
 		return
-	if(istype(W, /obj/item/weapon/card/id)||istype(W, /obj/item/device/pda))
-		if(istype(W, /obj/item/device/pda))
-			var/obj/item/device/pda/pda = W
+	if(istype(W, /obj/item/card/id)||istype(W, /obj/item/pda))
+		if(istype(W, /obj/item/pda))
+			var/obj/item/pda/pda = W
 			W = pda.id
 		if(!W:access) //no access
 			to_chat(user, "The access level of [W:registered_name]\'s card is not high enough. ")
@@ -149,6 +149,12 @@
 		shuttle_master.emergencyLastCallLoc = null
 
 	emergency_shuttle_called.Announce("The emergency shuttle has been called. [redAlert ? "Red Alert state confirmed: Dispatching priority shuttle. " : "" ]It will arrive in [timeLeft(600)] minutes.[reason][shuttle_master.emergencyLastCallLoc ? "\n\nCall signal traced. Results can be viewed on any communications console." : "" ]")
+
+	if(reason == "Automatic Crew Transfer" && signalOrigin == null) // Best way we have to check that it's actually a crew transfer and not just a player using the same message- any other calls to this proc should have a signalOrigin.
+		atc.shift_ending()
+	else // Emergency shuttle call (probably)
+		atc.reroute_traffic(yes = TRUE)
+
 
 /obj/docking_port/mobile/emergency/cancel(area/signalOrigin)
 	if(!canRecall)
@@ -345,7 +351,7 @@
 	height = 4
 	var/target_area = /area/mine/dangerous/unexplored
 
-/obj/docking_port/stationary/random/initialize()
+/obj/docking_port/stationary/random/Initialize()
 	..()
 	var/list/turfs = get_area_turfs(target_area)
 	var/turf/T = pick(turfs)

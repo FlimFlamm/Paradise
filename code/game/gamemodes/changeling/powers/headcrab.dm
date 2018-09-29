@@ -6,6 +6,11 @@
 	dna_cost = 1
 	req_human = 1
 
+/obj/effect/proc_holder/changeling/headcrab/try_to_sting(mob/user, mob/target)
+    if(alert("Are you sure you wish to do this? This action cannot be undone.",,"Yes","No")=="No")
+        return
+    ..()
+
 /obj/effect/proc_holder/changeling/headcrab/sting_action(mob/user)
 	var/datum/mind/M = user.mind
 	var/list/organs = user.get_organs_zone("head", 1)
@@ -20,7 +25,7 @@
 		H.EyeBlurry(20)
 		var/obj/item/organ/internal/eyes/E = H.get_int_organ(/obj/item/organ/internal/eyes)
 		if(istype(E))
-			E.take_damage(5, 1)
+			E.receive_damage(5, 1)
 		H.AdjustConfused(3)
 	for(var/mob/living/silicon/S in range(2,user))
 		to_chat(S, "<span class='userdanger'>Your sensors are disabled by a shower of blood!</span>")

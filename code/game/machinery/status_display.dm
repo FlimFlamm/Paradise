@@ -16,7 +16,7 @@
 	name = "status display"
 	anchored = 1
 	density = 0
-	use_power = 1
+	use_power = IDLE_POWER_USE
 	idle_power_usage = 10
 	var/mode = 1	// 0 = Blank
 					// 1 = Shuttle timer
@@ -54,7 +54,7 @@
 	return ..()
 
 // register for radio system
-/obj/machinery/status_display/initialize()
+/obj/machinery/status_display/Initialize()
 	..()
 	if(radio_controller)
 		radio_controller.add_object(src, frequency)
@@ -98,7 +98,7 @@
 					message2 = "Error!"
 			else
 				message1 = "TIME"
-				message2 = worldtime2text()
+				message2 = station_time_timestamp("hh:mm")
 			update_display(message1, message2, use_warn)
 			return 1
 		if(STATUS_DISPLAY_MESSAGE)	//custom messages
@@ -126,7 +126,7 @@
 			return 1
 		if(STATUS_DISPLAY_TIME)
 			message1 = "TIME"
-			message2 = worldtime2text()
+			message2 = station_time_timestamp("hh:mm")
 			update_display(message1, message2)
 			return 1
 	return 0
@@ -276,7 +276,6 @@
 		overlays.Cut()
 	overlays += image('icons/obj/status_display.dmi', icon_state=picture_state)
 
-#undef CHARS_PER_LINE
 #undef FONT_SIZE
 #undef FONT_COLOR
 #undef WARNING_FONT_COLOR

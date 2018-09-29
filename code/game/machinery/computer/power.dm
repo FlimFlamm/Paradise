@@ -3,11 +3,11 @@
 	desc = "Used to monitor power levels across the station."
 	icon_screen = "power"
 	icon_keyboard = "power_key"
-	use_power = 2
+	use_power = ACTIVE_POWER_USE
 	idle_power_usage = 20
 	active_power_usage = 80
 	light_color = LIGHT_COLOR_ORANGE
-	circuit = /obj/item/weapon/circuitboard/powermonitor
+	circuit = /obj/item/circuitboard/powermonitor
 	var/datum/powernet/powernet = null
 	var/datum/nano_module/power_monitor/power_monitor
 
@@ -17,7 +17,7 @@
 	power_monitors = sortAtom(power_monitors)
 	power_monitor = new(src)
 
-/obj/machinery/computer/monitor/initialize()
+/obj/machinery/computer/monitor/Initialize()
 	..()
 	powermonitor_repository.update_cache()
 	powernet = find_powernet()

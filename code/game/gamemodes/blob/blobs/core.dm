@@ -60,7 +60,7 @@
 /obj/structure/blob/core/RegenHealth()
 	return // Don't regen, we handle it in Life()
 
-/obj/structure/blob/core/Life()
+/obj/structure/blob/core/Life(seconds, times_fired)
 	if(!overmind)
 		create_overmind()
 	else
@@ -121,3 +121,16 @@
 			spawn(0)
 				if(is_offspring)
 					B.verbs -= /mob/camera/blob/verb/split_consciousness
+
+/obj/structure/blob/core/proc/lateblobtimer()
+	addtimer(CALLBACK(src, .proc/lateblobcheck), 50)
+
+/obj/structure/blob/core/proc/lateblobcheck()
+	if(overmind)
+		overmind.add_points(60)
+		if(overmind.mind)
+			overmind.mind.special_role = SPECIAL_ROLE_BLOB_OVERMIND
+		else
+			log_debug("/obj/structure/blob/core/proc/lateblobcheck: Blob core lacks a overmind.mind.")
+	else
+		log_debug("/obj/structure/blob/core/proc/lateblobcheck: Blob core lacks an overmind.")

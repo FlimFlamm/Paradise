@@ -37,7 +37,7 @@
 	doomsday_device = DOOM
 	doomsday_device.start()
 	verbs -= /mob/living/silicon/ai/proc/nuke_station
-	for(var/obj/item/weapon/pinpointer/point in pinpointer_list)
+	for(var/obj/item/pinpointer/point in pinpointer_list)
 		for(var/mob/living/silicon/ai/A in ai_list)
 			if((A.stat != DEAD) && A.nuking)
 				point.the_disk = A //The pinpointer now tracks the AI core
@@ -159,9 +159,8 @@
 	for(var/obj/machinery/door/D in airlocks)
 		if(!is_station_level(D.z))
 			continue
-		spawn(0)
-			D.hostile_lockdown(src)
-		addtimer(D, "disable_lockdown", 900)
+		INVOKE_ASYNC(D, /obj/machinery/door.proc/hostile_lockdown, src)
+		addtimer(CALLBACK(D, /obj/machinery/door.proc/disable_lockdown), 900)
 
 	post_status("alert", "lockdown")
 
@@ -186,17 +185,15 @@
 	set name = "Destroy RCDs"
 	set desc = "Detonate all RCDs on the station, while sparing onboard cyborg RCDs."
 
-	if(stat || malf_cooldown)
+	if(stat || malf_cooldown > world.time)
 		return
 
-	for(var/obj/item/weapon/rcd/RCD in rcd_list)
-		if(!istype(RCD, /obj/item/weapon/rcd/borg)) //Ensures that cyborg RCDs are spared.
+	for(var/obj/item/rcd/RCD in rcd_list)
+		if(!istype(RCD, /obj/item/rcd/borg)) //Ensures that cyborg RCDs are spared.
 			RCD.detonate_pulse()
 
 	to_chat(src, "<span class='danger'>RCD detonation pulse emitted.</span>")
-	malf_cooldown = 1
-	spawn(100)
-		malf_cooldown = 0
+	malf_cooldown = world.time + 100
 
 
 /datum/AI_Module/large/mecha_domination
@@ -331,7 +328,7 @@
 				audible_message("<span class='italics'>You hear a loud electrical buzzing sound!</span>")
 				to_chat(src, "<span class='warning'>Reprogramming machine behaviour...</span>")
 				spawn(50)
-					if(M && !qdeleted(M))
+					if(M && !QDELETED(M))
 						new /mob/living/simple_animal/hostile/mimic/copy/machine(get_turf(M), M, src, 1)
 			else
 				to_chat(src, "<span class='notice'>Out of uses.</span>")
@@ -455,7 +452,7 @@
 	set name = "Reactivate Cameranet"
 	set category = "Malfunction"
 
-	if(stat || malf_cooldown)
+	if(stat || malf_cooldown > world.time)
 		return
 	var/fixedcams = 0 //Tells the AI how many cams it fixed. Stats are fun.
 
@@ -478,9 +475,7 @@
 				break
 	to_chat(src, "<span class='notice'>Diagnostic complete! Operations completed: [fixedcams].</span>")
 
-	malf_cooldown = 1
-	spawn(30) //Lag protection
-		malf_cooldown = 0
+	malf_cooldown = world.time + 30
 
 
 /datum/AI_Module/large/upgrade_cameras
