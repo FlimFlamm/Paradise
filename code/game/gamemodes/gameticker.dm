@@ -256,7 +256,7 @@ var/round_start_time = 0
 	cinematic.icon = 'icons/effects/station_explosion.dmi'
 	cinematic.icon_state = "station_intact"
 	cinematic.layer = 21
-	cinematic.mouse_opacity = 0
+	cinematic.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	cinematic.screen_loc = "1,0"
 
 	var/obj/structure/stool/bed/temp_buckle = new(src)
@@ -387,7 +387,7 @@ var/round_start_time = 0
 
 	//emergency_shuttle.process() DONE THROUGH PROCESS SCHEDULER
 
-	var/game_finished = shuttle_master.emergency.mode >= SHUTTLE_ENDGAME || mode.station_was_nuked
+	var/game_finished = SSshuttle.emergency.mode >= SHUTTLE_ENDGAME || mode.station_was_nuked
 	if(config.continuous_rounds)
 		mode.check_finished() // some modes contain var-changing code in here, so call even if we don't uses result
 	else

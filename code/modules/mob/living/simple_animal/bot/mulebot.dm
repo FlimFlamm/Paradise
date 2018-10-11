@@ -401,9 +401,16 @@
 			M.layer = layer + 0.1
 
 	else //post unbuckling
-		load = null
-		M.layer = initial(M.layer)
-		M.pixel_y = initial(M.pixel_y)
+		reset_buckled_mob(M)
+
+/mob/living/simple_animal/bot/mulebot/post_unbuckle_mob(mob/living/M)
+	. = ..()
+	reset_buckled_mob(M)
+
+/mob/living/simple_animal/bot/mulebot/proc/reset_buckled_mob(mob/living/M)
+	load = null
+	M.layer = initial(M.layer)
+	M.pixel_y = initial(M.pixel_y)
 
 // called to unload the bot
 // argument is optional direction to unload
@@ -694,7 +701,7 @@
 /mob/living/simple_animal/bot/mulebot/proc/RunOver(mob/living/carbon/human/H)
 	add_attack_logs(src, H, "Run over (DAMTYPE: [uppertext(BRUTE)])")
 	H.visible_message("<span class='danger'>[src] drives over [H]!</span>", \
-					"<span class='userdanger'>[src] drives over you!<span>")
+					"<span class='userdanger'>[src] drives over you!</span>")
 	playsound(loc, 'sound/effects/splat.ogg', 50, 1)
 
 	var/damage = rand(5,15)
